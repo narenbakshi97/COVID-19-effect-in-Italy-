@@ -18,7 +18,7 @@ The COVID-19 pandemic, also known as the coronavirus pandemic, is an ongoing pan
 
 ### 1. Loading the libraries:
 Here we are using libraries like tidyverse for easy code manipulation and ggplot, plotly, etc for visualizing the data
-```{r Library, warning=FALSE, echo = TRUE, eval = FALSE, message = FALSE}
+```{r Library, warning=FALSE, echo = TRUE, message = FALSE}
 # libraries for Section 2
 library(tidyverse)
 library(reshape2)
@@ -28,6 +28,10 @@ library(plotly)
 library(gridExtra)
 library(ggpubr)
 library(RCurl)
+
+# for animation
+library(gganimate)
+library(ggrepel)
 ```
 
 ### 2. The Global Impact:
@@ -62,4 +66,22 @@ All 3 files are merged in one dataframe, before that we checked if the column na
 ```{r GLOBAL_3, echo = TRUE}
 # Creating the dataframe
 covid_world_df <- do.call(rbind, world_covid)
+```
+```{r GLOBAL_4, echo = FALSE}
+# changing the format of some regions to desired format for visualization
+covid_world_df[which(covid_world_df$Country.Region == 'United Kingdom'), 'Country.Region'] = 'UK'
+covid_world_df[which(covid_world_df$Country.Region == 'Korea, South'), 'Country.Region'] = 'Korea S'
+
+# sum the group by country and by status 
+date_col_idx = which(grepl('X', colnames(covid_world_df)))
+```
+
+```{r GLOBAL_5}
+# sorting by top 10 
+country_wise = covid_world_df %>% 
+  filter(Country.Region != 'China') %>% 
+  select(c(Country.Region, Status, colnames(.)[date_col_idx])) %>%
+  group_by(Country.Region, Status) %>%
+  summarise_each(funs(sum)) %>% 
+  data.frame() 
 ```
