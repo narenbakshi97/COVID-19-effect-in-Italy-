@@ -1,7 +1,5 @@
 ---
-title: "COVID19 Effect in Italy"
-author: "Naren Bakshi"
-date: "May 4, 2020"
+title: "Data Wrangling Final Project: COVID19 Effect in Italy"
 output: html_document
 ---
 
@@ -10,78 +8,110 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
+```{r 1_a, warning=FALSE, message=FALSE, echo = FALSE}
+# Loading the library
+library(tidyverse)
+library(ggplot2)
+library(readr)
+library(maps)
+library(viridis)
+library("twitteR")
+library(tm)
+library(wordcloud)
+```
+
+```{r, cache=TRUE, echo=FALSE, message=FALSE}
+# tokens
+consumer_key <- 'PeqvS8lMPOqvRdwF1kXRjvfdv'
+consumer_secret <- 'AZx34Y7zoeoiUYWXEr6Q3p7cz4oM5RdCjMcxzjcB7BIK2iVDVA'
+access_token <- '2175654816-Z6PlvP3YEyKHAo8Qia4Qhr2LMzNEHizOy0Y5BEK'
+access_secret <- '9tqoZNDdfcmkJEc4lsdRjhouEBnFMRf9YZI4v87JMk5wJ'
+
+# setting up auth
+setup_twitter_oauth(consumer_key, consumer_secret, access_token, access_secret)
+
+# inserting the keyword
+covid_word_cloud <- searchTwitter('#COVID-19 + #Coronavirus', n = 5000, since = '2020-01-30', retryOnRateLimit = 1e3)
+twitter_df = twListToDF(covid_word_cloud)
+```
+
+```{r echo = FALSE, message=FALSE, warning=FALSE}
+# change dataset into a corpus
+tweet_corp <- Corpus(VectorSource(twitter_df))
+
+# data pre-processing
+tweet_corp <- tm_map(tweet_corp, tolower)
+tweet_corp <- tm_map(tweet_corp, PlainTextDocument)
+tweet_corp <- tm_map(tweet_corp, removePunctuation)
+for (i in seq(tweet_corp)) {
+  tweet_corp[[i]] <- gsub('[^a-zA-Z|[:blank:]]', "", tweet_corp[[i]])
+}
+
+# removing the stop words
+new_stops <-c("covid","iphone","coronavirus","hrefhttptwittercomdownloadandroid","relnofollowtwitter","androida","hrefhttptwittercomdownloadiphone","relnofollowtwitter","iphonea","web","rt","chuonlinenews","hrefhttpsmobiletwittercom","hrefhttptwittercomdownloadipad","bharianmy","lebih","berbanding","dijangkiti","kumpulan","mudah","terdedah","covidhttpstcoigdxdtmvrg","hrefhttpsabouttwittercomproductstweetdeck", "darah","appa","zealand","http","nota","href","follow","ufabu")
+tweet_corp <- tm_map(tweet_corp, removeWords, words = c(stopwords("English"), new_stops))
+tweet_corp <- tm_map(tweet_corp, stripWhitespace)
+tweet_corp <- tm_map(tweet_corp, PlainTextDocument)
+
+# tokenizing the textsinto words
+tokenizer <- function(x) {
+  NGramTokenizer(x, Weka_control(min = 1, max = 1))
+}
+
+
+tweet_tokens <- TermDocumentMatrix(tweet_corp, control = list(tokenize = tokenizer)) %>%
+as.matrix() %>%
+rowSums()
+
+# displaying the cloud
+pal <- brewer.pal(9,"Set1")
+wordcloud(names(tweet_tokens), tweet_tokens, min.freq=100, max.words = 350, random.order=TRUE,random.color = TRUE, rot.per=.15, colors = pal,scale = c(5,1))
+```
 
 ### **COVID 19:**
 The COVID-19 pandemic, also known as the coronavirus pandemic, is an ongoing pandemic of coronavirus disease 2019 (COVID‑19) caused by severe acute respiratory syndrome coronavirus 2 (SARS‑CoV‑2). The outbreak was identified in Wuhan, China, in December 2019. The World Health Organization declared the outbreak a Public Health Emergency of International Concern on 30 January, and a pandemic on 11 March.As of 4 May 2020, more than 3.52 million cases of COVID-19 have been reported in 187 countries and territories, resulting in more than 248,000 deaths. More than 1.13 million people have recovered.
 
 * [Source: Wikipedia](https://en.wikipedia.org/wiki/COVID-19_pandemic)
 
-### 1. Loading the libraries:
-Here we are using libraries like tidyverse for easy code manipulation and ggplot, plotly, etc for visualizing the data
-```{r Library, warning=FALSE, echo = TRUE, message = FALSE}
-# libraries for Section 2
-library(tidyverse)
-library(reshape2)
-library(magrittr)
-library(ggplot2)
-library(plotly)
-library(gridExtra)
-library(ggpubr)
-library(RCurl)
+### **1. Global Impact:**
+Let's first visualize the global impact of COVID-19. I used the package managed by Johns Hopkins University. The repository contains time series data of confirmed, recovered, and deaths cases world-wide and for US in seperate CSV files, I used the csv file containing information about the confirmed cases world wide. 
 
-# for animation
-library(gganimate)
-library(ggrepel)
+* [Github repository source](https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/csse_covid_19_time_series)
+
+
+
+```{r 1_b, warning=FALSE, message=FALSE, echo = FALSE}
+# Importing the data
+world_covid_df <- read_csv("data/time_series_covid19_confirmed_global.csv")
+
+# getting the world map
+world <- map_data("world")
+
+# deciding the cutoffs based on number of cases
+cutoffs <- c(1, 20, 100, 1000, 50000, 100000)
 ```
 
-### 2. The Global Impact:
-```{r GLOBAL_1, echo = FALSE, eval= TRUE}
-# loading the data
-world_data_path <- 'data/world/'
-world_data_files <- list.files(world_data_path)
 
-# reading all files in one dataframe
-world_covid <- lapply(world_data_files,
-                      function(i){
-                        df <- read.csv(paste0(world_data_path, '/', i), stringsAsFactors = FALSE)
-                        file = gsub('.csv', '', i)
-                        df$Status = strsplit(file, '_')[[1]][4]
-                        df
-                      })
-```
-```{r GLOBAL_2, echo=FALSE, eval=FALSE}
-### checking the column names for all of 3 matches 
-columns = sapply(world_covid, colnames)
-all(columns[, 1] == columns[, 2])
-all(columns[, 2] == columns[, 3])
-all(columns[, 1] == columns[, 3])
-# We got TRUE for ALL 3 statements, which means our data is consistent over the files
+```{r 1_c, warning=FALSE, message=FALSE, echo=FALSE}
+# the plot
+ggplot() +
+ geom_polygon(data = world, aes(x=long, y = lat, group = group), fill="grey", alpha=0.3) +
+ geom_point(data=world_covid_df, aes(x=Long, y=Lat, size=`3/3/20`, color=`3/3/20`),stroke=F, alpha=0.7) +
+ scale_size_continuous(name="Cases", trans="log", range=c(1,10),breaks=cutoffs, labels = c("1-19", "20-99", "100-999", "1,000-49,999", "50,000-99,999","1,00,000+")) +
+    scale_color_viridis_c(option="inferno",name="Cases", trans="log",breaks=cutoffs, labels = c("1-19", "20-99", "100-999", "1,000-49,999", "50,000-99,999","1,00,000+")) +
+    theme_void() + 
+    guides( colour = guide_legend()) +
+    labs(caption = "Worldwide effect of COVID-19") +
+    theme(
+        legend.position = "bottom"
+    )
 ```
 
-We are using 3 seperate csv files for analyzing the world impact. Each file is dedictated to store confirmed, deaths, and recovered cases world wide managed by Johns Hopkins University. 
+This is an archived version of the data, which was updated 1 month ago. Here we can see that number of case are still building up in the US while the outbreak was serious and getting out of control for Italy and other Europian countries, along with China. 
 
-* [Git repository source](https://github.com/CSSEGISandData/COVID-19)
+### **2.Italy**
 
-All 3 files are merged in one dataframe, before that we checked if the column names in each are identical or not,  and I found that they are.
-```{r GLOBAL_3, echo = TRUE}
-# Creating the dataframe
-covid_world_df <- do.call(rbind, world_covid)
-```
-```{r GLOBAL_4, echo = FALSE}
-# changing the format of some regions to desired format for visualization
-covid_world_df[which(covid_world_df$Country.Region == 'United Kingdom'), 'Country.Region'] = 'UK'
-covid_world_df[which(covid_world_df$Country.Region == 'Korea, South'), 'Country.Region'] = 'Korea S'
+As we can see from the world data as well, we can see that Italy is one of the most affected countries by COVID-19. I have chose multiple datasets for analysing the effect based on different parameters. 
+```{r}
 
-# sum the group by country and by status 
-date_col_idx = which(grepl('X', colnames(covid_world_df)))
-```
-
-```{r GLOBAL_5}
-# sorting by top 10 
-country_wise = covid_world_df %>% 
-  filter(Country.Region != 'China') %>% 
-  select(c(Country.Region, Status, colnames(.)[date_col_idx])) %>%
-  group_by(Country.Region, Status) %>%
-  summarise_each(funs(sum)) %>% 
-  data.frame() 
 ```
