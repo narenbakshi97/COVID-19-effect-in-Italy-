@@ -9,3 +9,57 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+
+
+### **COVID 19:**
+The COVID-19 pandemic, also known as the coronavirus pandemic, is an ongoing pandemic of coronavirus disease 2019 (COVID‑19) caused by severe acute respiratory syndrome coronavirus 2 (SARS‑CoV‑2). The outbreak was identified in Wuhan, China, in December 2019. The World Health Organization declared the outbreak a Public Health Emergency of International Concern on 30 January, and a pandemic on 11 March.As of 4 May 2020, more than 3.52 million cases of COVID-19 have been reported in 187 countries and territories, resulting in more than 248,000 deaths. More than 1.13 million people have recovered.
+
+* [Source: Wikipedia](https://en.wikipedia.org/wiki/COVID-19_pandemic)
+
+### 1. Loading the libraries:
+Here we are using libraries like tidyverse for easy code manipulation and ggplot, plotly, etc for visualizing the data
+```{r Library, warning=FALSE, echo = TRUE, eval = FALSE, message = FALSE}
+# libraries for Section 2
+library(tidyverse)
+library(reshape2)
+library(magrittr)
+library(ggplot2)
+library(plotly)
+library(gridExtra)
+library(ggpubr)
+library(RCurl)
+```
+
+### 2. The Global Impact:
+```{r GLOBAL_1, echo = FALSE, eval= TRUE}
+# loading the data
+world_data_path <- 'data/world/'
+world_data_files <- list.files(world_data_path)
+
+# reading all files in one dataframe
+world_covid <- lapply(world_data_files,
+                      function(i){
+                        df <- read.csv(paste0(world_data_path, '/', i), stringsAsFactors = FALSE)
+                        file = gsub('.csv', '', i)
+                        df$Status = strsplit(file, '_')[[1]][4]
+                        df
+                      })
+```
+```{r GLOBAL_2, echo=FALSE, eval=FALSE}
+### checking the column names for all of 3 matches 
+columns = sapply(world_covid, colnames)
+all(columns[, 1] == columns[, 2])
+all(columns[, 2] == columns[, 3])
+all(columns[, 1] == columns[, 3])
+# We got TRUE for ALL 3 statements, which means our data is consistent over the files
+```
+
+We are using 3 seperate csv files for analyzing the world impact. Each file is dedictated to store confirmed, deaths, and recovered cases world wide managed by Johns Hopkins University. 
+
+* [Git repository source](https://github.com/CSSEGISandData/COVID-19)
+
+All 3 files are merged in one dataframe, before that we checked if the column names in each are identical or not,  and I found that they are.
+```{r GLOBAL_3, echo = TRUE}
+# Creating the dataframe
+covid_world_df <- do.call(rbind, world_covid)
+```
