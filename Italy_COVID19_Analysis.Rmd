@@ -7,6 +7,10 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+### **COVID 19:**
+The COVID-19 pandemic, also known as the coronavirus pandemic, is an ongoing pandemic of coronavirus disease 2019 (COVID‑19) caused by severe acute respiratory syndrome coronavirus 2 (SARS‑CoV‑2). The outbreak was identified in Wuhan, China, in December 2019. The World Health Organization declared the outbreak a Public Health Emergency of International Concern on 30 January, and a pandemic on 11 March.As of 4 May 2020, more than 3.52 million cases of COVID-19 have been reported in 187 countries and territories, resulting in more than 248,000 deaths. More than 1.13 million people have recovered.
+
+* [Source: Wikipedia](https://en.wikipedia.org/wiki/COVID-19_pandemic)
 
 ```{r 1_a, warning=FALSE, message=FALSE, echo = FALSE}
 # Loading the library
@@ -18,6 +22,7 @@ library(viridis)
 library("twitteR")
 library(tm)
 library(wordcloud)
+library(plotrix)
 ```
 
 ```{r, cache=TRUE, echo=FALSE, message=FALSE}
@@ -35,7 +40,7 @@ covid_word_cloud <- searchTwitter('#COVID-19 + #Coronavirus', n = 5000, since = 
 twitter_df = twListToDF(covid_word_cloud)
 ```
 
-```{r echo = FALSE, message=FALSE, warning=FALSE}
+```{r cache= TRUE, echo = FALSE, message=FALSE, warning=FALSE}
 # change dataset into a corpus
 tweet_corp <- Corpus(VectorSource(twitter_df))
 
@@ -49,7 +54,7 @@ for (i in seq(tweet_corp)) {
 
 # removing the stop words
 new_stops <-c("covid","iphone","coronavirus","hrefhttptwittercomdownloadandroid","relnofollowtwitter","androida","hrefhttptwittercomdownloadiphone","relnofollowtwitter","iphonea","web","rt","chuonlinenews","hrefhttpsmobiletwittercom","hrefhttptwittercomdownloadipad","bharianmy","lebih","berbanding","dijangkiti","kumpulan","mudah","terdedah","covidhttpstcoigdxdtmvrg","hrefhttpsabouttwittercomproductstweetdeck", "darah","appa","zealand","http","nota","href","follow","ufabu")
-tweet_corp <- tm_map(tweet_corp, removeWords, words = c(stopwords("English"), new_stops))
+tweet_corp <- tm_map(tweet_corp, removeWords, words = c(stopwords("English"), stopwords("Spanish"), new_stops))
 tweet_corp <- tm_map(tweet_corp, stripWhitespace)
 tweet_corp <- tm_map(tweet_corp, PlainTextDocument)
 
@@ -68,10 +73,6 @@ pal <- brewer.pal(9,"Set1")
 wordcloud(names(tweet_tokens), tweet_tokens, min.freq=100, max.words = 350, random.order=TRUE,random.color = TRUE, rot.per=.15, colors = pal,scale = c(5,1))
 ```
 
-### **COVID 19:**
-The COVID-19 pandemic, also known as the coronavirus pandemic, is an ongoing pandemic of coronavirus disease 2019 (COVID‑19) caused by severe acute respiratory syndrome coronavirus 2 (SARS‑CoV‑2). The outbreak was identified in Wuhan, China, in December 2019. The World Health Organization declared the outbreak a Public Health Emergency of International Concern on 30 January, and a pandemic on 11 March.As of 4 May 2020, more than 3.52 million cases of COVID-19 have been reported in 187 countries and territories, resulting in more than 248,000 deaths. More than 1.13 million people have recovered.
-
-* [Source: Wikipedia](https://en.wikipedia.org/wiki/COVID-19_pandemic)
 
 ### **1. Global Impact:**
 Let's first visualize the global impact of COVID-19. I used the package managed by Johns Hopkins University. The repository contains time series data of confirmed, recovered, and deaths cases world-wide and for US in seperate CSV files, I used the csv file containing information about the confirmed cases world wide. 
@@ -92,7 +93,7 @@ cutoffs <- c(1, 20, 100, 1000, 50000, 100000)
 ```
 
 
-```{r 1_c, warning=FALSE, message=FALSE, echo=FALSE}
+```{r 1_c, caching = TRUE,warning=FALSE, message=FALSE, echo=FALSE}
 # the plot
 ggplot() +
  geom_polygon(data = world, aes(x=long, y = lat, group = group), fill="grey", alpha=0.3) +
@@ -111,7 +112,90 @@ This is an archived version of the data, which was updated 1 month ago. Here we 
 
 ### **2.Italy**
 
-As we can see from the world data as well, we can see that Italy is one of the most affected countries by COVID-19. I have chose multiple datasets for analysing the effect based on different parameters. 
-```{r}
+As we can see from the world data as well, we can see that Italy is one of the most affected countries by COVID-19. I have chose multiple datasets for analysing the effect based on different parameters. The datasets from Kaggle. Here are the sources.
 
+1. [Novel Coronavirus COVID-19 Italy Dataset](https://www.kaggle.com/virosky/italy-covid19)
+1. [COVID-19 in Italy](https://www.kaggle.com/sudalairajkumar/covid19-in-italy)
+1. [Novel Corona Virus 2019 Dataset](https://www.kaggle.com/sudalairajkumar/novel-corona-virus-2019-dataset)
+
+The analysis is divided into further parts based on the following factors: 
+
+1. Gender
+1. Area
+1. Age
+
+### **3. Analysis by Age**
+```{r italy_age_1, warning=FALSE}
+# Loading the data
+covid_italy <- read.csv("data/covid-age.csv")
+
+# exploring the data
+head(covid_italy)
+
+#dealing with unknown values 
+covid_italy <- subset(covid_italy, covid_italy$age_classes != "Uknown")
+
+covid_italy$age_classes <- factor(covid_italy$age_classes, levels = c("0-9", "10-19", "20-29", "30-39", "40-49","50-59","60-69","70-79","80-89",">90"))
 ```
+
+```{r italy_age_2, warning=FALSE, echo = FALSE}
+ggplot(covid_italy, aes(x = age_classes,  y = total_cases)) +
+  geom_bar(stat = "identity", fill = "#00AFBB") +
+  ggtitle("Age distribution of confirmed cases") + 
+  xlab("Age group") +
+  ylab("Number of Cases")
+```
+
+As we can see the most affected age group in Italy is 50 to 59 years, followed by 70 to 79 years. So we can clearly see that old and middle aged people are more likely to get the virus. The yongest and oldest age group has not been affected much as the other ones. This could be because in any situation both age groups are considred fragile and they have less immunity, so people care extra for them. There are less cases confirmed of younger groups. The other reason for having lesser cases in younger people might be due to the fact that Italy has the oldest population across globe by count. According to EU statistics Italy has the lowest percentage of young people. 
+
+### **4. Analysis by Gender**
+```{r italy_gender_1, warning=FALSE}
+# loading the data for Gender analysis
+covid_gender <- read.csv("data/COVID19_open_line_list.csv")
+
+# fetching the gender counts
+gender <- c(table(covid_gender$sex))
+female <- c(gender["female"] + gender["Female"])
+male <- c(gender["male"] + gender["Male"])
+gender <- c(female, male)
+lbls <- c("Female", "Male")
+pie3D(gender, labels = lbls, main="Pie chart showing gender distribution")
+```
+
+This pie chart suggests that man are more likely to die from coronavirus than women. Researchers had found that the infection rate among men and women is the same but the death rate among men is 2.8% as compared with 1.7% for women. As there are a few reasons men are more likely to die from the new coronavirus. As because Women have a heightened immunity system response. Scientists have explained the reason for more numbers of infected people from Coronavirus in men over women. As in china almost 50- 80% of men do smoking whereas only 2-3% of women do smoking which affects the respiratory system of men over women.
+
+
+### **5. Analysis by Area
+```{r byarea_1, warning=FALSE, echo=FALSE}
+# loading the data
+covid_region <- read.csv("data/covid19-ita-regions.csv")
+head(covid_region)
+
+# plotting regionwise
+ggplot(covid_region, aes(y = region, x = total_confirmed_cases)) +
+  geom_bar(stat = "identity", fill = "#00AFBB") +
+  ggtitle("Region wise distribution of confirmed cases") + 
+  ylab("Region") +
+  xlab("Number of Cases")
+```
+
+The plot supports what we have heard in the news and over all reality. Lombardia region has the most number of cases reported, followed by Emilia-Romagna. Now let's see number of deaths reported per area
+
+```{r byarea_2, warning=FALSE, echo=FALSE}
+# plotting regionn wise
+ggplot(covid_region, aes(y = region, x = deaths)) +
+  geom_bar(stat = "identity", fill = "#00AFBB") +
+  ggtitle("Region wise distribution of reported deaths") + 
+  ylab("Region") +
+  xlab("Number of deaths reported")
+```
+
+```{r byarea_3, warning=FALSE, echo=FALSE}
+# plotting regionn wise
+ggplot(covid_region, aes(y = region, x = recovered)) +
+  geom_bar(stat = "identity", fill = "#00AFBB") +
+  ggtitle("Region wise distribution of recovered patients") + 
+  ylab("Region") +
+  xlab("Number of patients recovered")
+```
+
