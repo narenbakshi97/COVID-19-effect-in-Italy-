@@ -3,6 +3,8 @@ title: "Data Wrangling Final Project: COVID19 Effect in Italy"
 output: html_document
 ---
 
+[Github repository link](https://github.com/narenbakshi97/COVID-19-effect-in-Italy-)
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -23,6 +25,7 @@ library("twitteR")
 library(tm)
 library(wordcloud)
 library(plotrix)
+library(lubridate)
 ```
 
 ```{r, cache=TRUE, echo=FALSE, message=FALSE}
@@ -130,7 +133,7 @@ The analysis is divided into further parts based on the following factors:
 covid_italy <- read.csv("data/covid-age.csv")
 
 # exploring the data
-head(covid_italy)
+#head(covid_italy)
 
 #dealing with unknown values 
 covid_italy <- subset(covid_italy, covid_italy$age_classes != "Uknown")
@@ -161,15 +164,14 @@ gender <- c(female, male)
 lbls <- c("Female", "Male")
 pie3D(gender, labels = lbls, main="Pie chart showing gender distribution")
 ```
-
 This pie chart suggests that man are more likely to die from coronavirus than women. Researchers had found that the infection rate among men and women is the same but the death rate among men is 2.8% as compared with 1.7% for women. As there are a few reasons men are more likely to die from the new coronavirus. As because Women have a heightened immunity system response. Scientists have explained the reason for more numbers of infected people from Coronavirus in men over women. As in china almost 50- 80% of men do smoking whereas only 2-3% of women do smoking which affects the respiratory system of men over women.
 
 
-### **5. Analysis by Area
+### **5. Analysis by Area**
 ```{r byarea_1, warning=FALSE, echo=FALSE}
 # loading the data
 covid_region <- read.csv("data/covid19-ita-regions.csv")
-head(covid_region)
+#head(covid_region)
 
 # plotting regionwise
 ggplot(covid_region, aes(y = region, x = total_confirmed_cases)) +
@@ -190,6 +192,8 @@ ggplot(covid_region, aes(y = region, x = deaths)) +
   xlab("Number of deaths reported")
 ```
 
+Number of deaths reported go linearly with the number of cases confirmed, as seen in the above plot
+
 ```{r byarea_3, warning=FALSE, echo=FALSE}
 # plotting regionn wise
 ggplot(covid_region, aes(y = region, x = recovered)) +
@@ -199,3 +203,57 @@ ggplot(covid_region, aes(y = region, x = recovered)) +
   xlab("Number of patients recovered")
 ```
 
+Same applies to the recovered patients, they are proportional to number of cases confirmed so it means that no other factors are affecting, fortunately. 
+
+### **6. Timeseries analysis of confirmed cases **
+```{r ts_1, warning=FALSE}
+# extrating date and month from our time series
+covid_region$dm <- factor(format(as.Date(covid_region$date), "%m-%d"))
+
+# confirmed
+ggplot(covid_region, aes(x = dm, y = total_confirmed_cases, group = region, col = region)) +
+  geom_line() +
+  ggtitle("Time series of region wise distribution of number of cases confirmed") + 
+  xlab("Time") +
+  ylab("Number of cases confirmed") +
+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+```{r ts_2, warning=FALSE}
+ggplot(covid_region, aes(x = dm, y = deaths, group = region, col = region)) +
+  geom_line() +
+  ggtitle("Time series of region wise distribution of number of deaths reported") + 
+  xlab("Time") +
+  ylab("Number of deaths reported") +
+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+```{r ts_3, warning=FALSE}
+ggplot(covid_region, aes(x = dm, y = recovered, group = region, col = region)) +
+  geom_line() +
+  ggtitle("Time series of region wise distribution of number of recovered patients") + 
+  xlab("Time") +
+  ylab("Number of recovered patients") +
+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+```{r ts_4, warning=FALSE}
+ggplot(covid_region, aes(x = dm)) +
+  geom_line(aes(y = new_confirmed_cases), color = "darkred") +
+  ggtitle("Time series of new cases confirmed") + 
+  xlab("Time") +
+  ylab("Number of new cases") +
+theme(axis.text.x=element_text(angle=90,hjust=1,vjust=0.5))
+```
+
+As we can see that the curve is getting flattened, which is a good sign.
+
+### **Prevention:**
+To avoid the critical situation people are suggested to do following things
+
+* Avoid contact with people who are sick.
+* Avoid touching your eyes, nose, and mouth.
+* Stay home when you are sick.
+* Cover your cough or sneeze with a tissue, then throw the tissue in the trash.
+* Clean and disinfect frequently touched objects and surfaces using a regular household
+* Wash your hands often with soap and water, especially after going to the bathroom; before eating; and after blowing your nose, coughing, or sneezing.If soap and water are not readily available, use an alcohol-based hand sanitizer.
